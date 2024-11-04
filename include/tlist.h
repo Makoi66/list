@@ -156,6 +156,8 @@ public:
     iterator begin() { return iterator(first); }
     iterator end() { return iterator(nullptr); }
 
+    const iterator begin() const { return iterator(first); }
+    const iterator end() const { return iterator(nullptr); }
 
 
     iterator insert(iterator pos, const T& value) {
