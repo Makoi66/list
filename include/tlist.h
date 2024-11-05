@@ -136,82 +136,69 @@ public:
         using pointer = T*;
         using reference = T&;
 
-        iterator(Node<T>* ptr = nullptr) : m_ptr(ptr) {}
+        iterator(Node<T>* ptr = nullptr, Node<T>* prev = nullptr)
+            : m_ptr(ptr), m_prev(prev) {}
 
         T& operator*() const { return m_ptr->value; }
         T* operator->() const { return &m_ptr->value; }
 
-        iterator& operator++() { m_ptr = m_ptr->next; return *this; }
-        iterator operator++(int) { iterator temp = *this; ++(*this); return temp; }
+        iterator& operator++() {
+            m_prev = m_ptr;
+            m_ptr = m_ptr->next;
+            return *this;
+        }
+
+        iterator operator++(int) {
+            iterator temp = *this;
+            ++(*this);
+            return temp;
+        }
 
         bool operator==(const iterator& other) const { return m_ptr == other.m_ptr; }
         bool operator!=(const iterator& other) const { return m_ptr != other.m_ptr; }
 
     private:
-        Node<T>* m_ptr;
+        Node<T>* m_ptr;    // current
+        Node<T>* m_prev;   // previous
         friend class List<T>;
     };
 
-
-    iterator begin() { return iterator(first); }
-    iterator end() { return iterator(nullptr); }
+    iterator begin() { return iterator(first, nullptr); }
+    iterator end() { return iterator(nullptr, last); }
+    const iterator begin() const { return iterator(first, nullptr); }
+    const iterator end() const { return iterator(nullptr, last); }
 
 
 
     iterator insert(iterator pos, const T& value) {
-        if (pos == end() || first == nullptr) {
+        if (pos.m_ptr == first) {
+            push_front(value);
+            return begin();
+        }
+        if (pos.m_ptr == nullptr) {
             push_back(value);
             return iterator(last);
         }
 
-        if (pos == begin()) {
-            push_front(value);
-            return begin();
-        }
-
-        Node<T>* newNode = new Node<T>(value);
-        Node<T>* prev = first;
-
-        while (prev->next != pos.m_ptr) {
-            prev = prev->next;
-            if (prev == nullptr || prev->next == nullptr) {
-                throw std::runtime_error("Invalid iterator");
-            }
-        }
-
-        newNode->next = prev->next;
-        prev->next = newNode;
-
-        return iterator(newNode);
+        Node<T>* newNode = new Node<T>(value, pos.m_ptr);
+        pos.m_prev->next = newNode;
+        return iterator(newNode, pos.m_prev);
     }
 
     iterator erase(iterator pos) {
-        if (pos == end() || first == nullptr) {
-            throw std::runtime_error("Cannot erase element at end or in empty List");
+        if (pos.m_ptr == nullptr) {
+            throw std::runtime_error("Cannot erase end iterator");
         }
-
-        if (pos == begin()) {
+        if (pos.m_ptr == first) {
             pop_front();
             return begin();
         }
-
-        Node<T>* prev = first;
-        while (prev->next != pos.m_ptr) {
-            prev = prev->next;
-            if (!prev || !prev->next) {
-                throw std::runtime_error("Invalid iterator");
-            }
+        pos.m_prev->next = pos.m_ptr->next;
+        if (pos.m_ptr == last) {
+            last = pos.m_prev;
         }
-
-        Node<T>* temp = prev->next;
-        prev->next = temp->next;
-
-        if (temp == last) {
-            last = prev;
-        }
-
-        delete temp;
-        return iterator(prev->next);
+        delete pos.m_ptr;
+        return iterator(pos.m_prev->next, pos.m_prev);
     }
 
 
